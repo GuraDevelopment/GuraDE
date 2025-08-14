@@ -50,23 +50,28 @@ MainWindow::MainWindow(QWidget *parent)
         bool inTriggerArea = cursorPos.x() <= screen.left() + margin &&
                              cursorPos.y() >= screen.bottom() - margin;
 
-        // Use a single if/else block to handle the two mutually exclusive states
+        static bool wasInCorner = false;
+
         if (inTriggerArea) {
-            if (!showed) {
-                raiseLauncher();
-                showed = true;
-                qDebug() << "showed";
+            // Only toggle the window if the cursor just entered the corner.
+            if (!wasInCorner) {
+                if (this->isVisible()) {
+                    this->hide();
+                } else {
+                    raiseLauncher();
+                }
             }
+            wasInCorner = true;
         } else {
-            if (showed) {
-                this->hide();
-                showed = false;
-                qDebug() << "hidden";
-            }
+            // The cursor has left the corner, so reset the flag.
+            wasInCorner = false;
         }
-        qDebug() << "end of cycle";
     });
-    cornerWatcher->start(150);  // check ~7 times/sec
+    cornerWatcher->start(150);
+
+
+    //here starts the reading of the config files
+
 }
 
 MainWindow::~MainWindow()
@@ -189,13 +194,27 @@ void MainWindow::getApps()
         mainLayout->addWidget(categoryLabel);
 
         QGridLayout *grid = new QGridLayout;
-        grid->setSpacing(4);
         int iconWidth = 150;
         int iconHeight = 150;
         int spacing = 4;
-        int windowWidth = this->width();
-        int colb = ((windowWidth-18)/158);
-        int columns = std::floor(colb);
+        grid->setSpacing(spacing);
+
+        int screenWidth = QGuiApplication::primaryScreen()->geometry().width();
+
+        // Calculate the effective width of an icon including its spacing.
+        int itemWidth = iconWidth + spacing;
+
+        // Calculate the number of columns using integer division,
+        // which automatically truncates and is more direct than std::floor.
+        int columns = screenWidth / itemWidth;
+
+        // Add a check to ensure there's at least one column to prevent a crash
+        if (columns < 1) {
+            columns = 1;
+        }
+
+        qDebug() << "Screen width:" << screenWidth;
+        qDebug() << "Calculated columns:" << columns;
 
 
 
@@ -401,3 +420,27 @@ void MainWindow::on_pushButton_18_clicked()
 {
     this->resize(this->width(), 100);
 }
+
+
+
+
+void MainWindow::on_firefox_clicked()
+{
+    QProcess::startDetached("firefox-esr");
+    this->hide();
+}
+
+
+void MainWindow::on_PCManFM_clicked()
+{
+    QProcess::startDetached("pcmanfm");
+    this->hide();
+}
+
+
+void MainWindow::on_MPV_clicked()
+{
+    QProcess::startDetached("vlc");
+    this->hide();
+}
+

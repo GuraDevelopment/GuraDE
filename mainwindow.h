@@ -42,6 +42,11 @@ private slots:
     void on_pushButton_17_clicked();
 
     void on_pushButton_18_clicked();
+    void on_firefox_clicked();
+
+    void on_PCManFM_clicked();
+
+    void on_MPV_clicked();
 
 private:
     Ui::MainWindow *ui;
