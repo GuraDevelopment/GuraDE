@@ -31,6 +31,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     boot();
     showFullScreen();
+    getApps();
     taskPopulater = new QTimer(this);
     connect(taskPopulater, &QTimer::timeout, this, &MainWindow::populateTaskList);
     taskPopulater->start(100);
@@ -86,7 +87,37 @@ void MainWindow::boot()
     ui->label_3->setText(currentDateTime.toString("hh:mm:ss"));
     QString user = qgetenv("USER");
     ui->label->setText("Welcome "+user+"!");
-    getApps();
+
+    QString directoryPath = QDir::homePath() + "/.GuraDE_data/tasks/";
+    // Clear any existing items in the list widget.
+    ui->listWidget->clear();
+
+    // Create a QDir object for the specified directory.
+    QDir directory(directoryPath);
+
+    // Check if the directory exists.
+    if (!directory.exists()) {
+        qDebug() << "Error: Directory does not exist:" << directoryPath;
+        return;
+    }
+
+    // Set a name filter to find only .txt files.
+    QStringList filters;
+    filters << "*.txt";
+
+    // Get a list of file information for the filtered files.
+    QFileInfoList fileInfoList = directory.entryInfoList(filters, QDir::Files | QDir::NoDotAndDotDot);
+
+    // Iterate through the list and add each file's name to the QListWidget.
+    foreach (const QFileInfo &fileInfo, fileInfoList) {
+        // Get the filename.
+        QString fileName = fileInfo.fileName();
+        // Remove the last 4 characters (e.g., ".txt")
+        fileName.chop(4);
+        qDebug() << "Found file:" << fileName;
+        ui->listWidget->addItem(fileName);
+    }
+
 }
 
 void MainWindow::PictureWidget()
@@ -442,5 +473,47 @@ void MainWindow::on_MPV_clicked()
 {
     QProcess::startDetached("vlc");
     this->hide();
+}
+
+
+void MainWindow::on_listWidget_currentTextChanged(const QString &currentText)
+{
+    QFile file(QDir::homePath() + "/.GuraDE_data/tasks/" + currentText + ".txt");
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // A message box or status bar update would be better here for user feedback
+        return;
+    }
+
+    QTextStream in(&file);
+    ui->textEdit->clear(); // Clear any previous content in the text edit
+
+    while (!in.atEnd()) {
+        QString line = in.readLine();
+        // Appending each line to QTextEdit will build the full content
+        ui->textEdit->append(line);
+    }
+
+    file.close(); // Remember to close the file
+}
+
+
+void MainWindow::on_pushButton_5_clicked()
+{
+    QString programName = "GuraDE_Tasks";
+    // Get the absolute path of the current executable's directory.
+    QString appDirPath = QCoreApplication::applicationDirPath();
+    // Combine the directory path with the program name to get the full path.
+    QString programPath = QDir(appDirPath).filePath(programName);
+
+    // Start the process detached from the current application.
+    // This means your main program will not be blocked and the launched program
+    // will continue to run even if your main program closes.
+    bool success = QProcess::startDetached(programPath);
+
+    if (success) {
+        qDebug() << "Successfully started program:" << programPath;
+    } else {
+        qDebug() << "Failed to start program:" << programPath;
+    }
 }
 
